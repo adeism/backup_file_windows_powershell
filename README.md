@@ -1,43 +1,64 @@
-# Backup File Server dengan powershell dan PuTTY Private Key Files
+# 📁 PowerShell File Sync Script
 
+Automatisasikan proses sinkronisasi file antara server Ubuntu dan komputer lokal Windows dengan skrip PowerShell ini. Gunakan skrip ini untuk menyalin file secara rekursif, menjaga atribut file, dan mencatat aktivitas untuk pemantauan yang lebih baik.
 
-## Menjalankan File PowerShell Script (.ps1) di Windows
+## 🚀 Fitur
 
-### Melalui PowerShell
+- 🔐 **Autentikasi Aman:** Menggunakan kunci PPK untuk autentikasi SSH.
+- 🔄 **Sinkronisasi Rekursif:** Menyalin seluruh direktori dan subdirektori.
+- 🕒 **Preservasi Atribut File:** Menjaga timestamp dan atribut lainnya.
+- 📜 **Logging Otomatis:** Mencatat aktivitas dan kesalahan ke file log.
+- 🛠️ **Konfigurasi Mudah:** Ganti variabel konfigurasi sesuai kebutuhan Anda.
 
-1. **Buka PowerShell:**
-    - Buka Start Menu.
-    - Cari "PowerShell" dan buka aplikasi "Windows PowerShell" atau "Windows PowerShell ISE".
+## 📝 Prasyarat
 
-2. **Izinkan Eksekusi Skrip:**
-    Pastikan kebijakan eksekusi PowerShell memungkinkan skrip dieksekusi. Jika perlu, jalankan perintah berikut di PowerShell dengan izin administrator:
-    ```powershell
-    Set-ExecutionPolicy RemoteSigned
+Sebelum menjalankan skrip, pastikan Anda memiliki hal-hal berikut:
+
+- **Windows PowerShell:** Versi terbaru PowerShell terinstal di sistem Anda.
+- **PuTTY & pscp:** Alat pscp.exe dari PuTTY untuk transfer file SCP.
+- **Kunci PPK:** File kunci PPK untuk autentikasi SSH.
+- **Akses SSH:** Akses ke server Ubuntu dengan kredensial yang benar.
+
+## 📥 Instalasi
+
+1. **Clone Repositori:**
+
+    ```bash
+    git clone https://github.com/username/repo-name.git
     ```
 
-3. **Jalankan Skrip:**
-    - Gunakan perintah `Set-Location` untuk menuju ke direktori yang berisi skrip PowerShell jika diperlukan:
-    ```powershell
-    Set-Location "C:\path\to\your\script\folder"
-    ```
-    - Jalankan skrip dengan perintah `.\<nama_skrip>.ps1` (gantikan `<nama_skrip>` dengan nama file skrip Anda):
-    ```powershell
-    .\nama_skrip.ps1
-    ```
+2. **Instal PuTTY:**
 
-### Melalui Task Scheduler
+    Unduh dan instal [PuTTY](https://www.putty.org/) untuk mendapatkan `pscp.exe`.
 
-1. **Buka Task Scheduler:**
-    - Buka "Task Scheduler" dari Start Menu atau jalankan `taskschd.msc` dari Run (Win + R).
+3. **Tempatkan pscp.exe:**
 
-2. **Buat Tugas Baru:**
-    - Klik kanan di "Task Scheduler Library" dan pilih "Create Task...".
+    Pastikan `pscp.exe` berada di jalur yang sesuai, misalnya `C:\Program Files\PuTTY\pscp.exe`.
 
-3. **Konfigurasi Tugas:**
-    - Beri tugas nama yang deskriptif di tab "General".
-    - Pilih tab "Actions", klik "New...", dan pilih aksi "Start a program".
-    - Isi "Program/script" dengan jalur ke `powershell.exe` (biasanya `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`).
-    - Di bagian "Add arguments (optional)", tambahkan argumen `-File "C:\path\to\your\script\folder\nama_skrip.ps1"` (gantikan dengan path skrip Anda).
+## ⚙️ Konfigurasi
 
-4. **Atur Waktu Eksekusi:**
-    - Pilih tab "Triggers", klik "New...", dan atur jadwal eksekusi sesuai kebutuhan.
+Buka skrip PowerShell dan sesuaikan variabel konfigurasi di bagian **Configuration Variables**:
+
+```powershell
+# =============================
+# Configuration Variables
+# =============================
+
+# Path to the source folder on the Ubuntu server
+$serverFolder = '/path/to/source/folder/'
+
+# Path to the local destination folder on Windows
+$localFolder = 'D:\Path\To\Local\Destination'
+
+# Path to the PPK key file for authentication
+$ppkFilePath = 'C:\Path\To\Your\keyfile.ppk'
+
+# Ubuntu server credentials
+$username = 'your_username'                  # Your server username
+$serverIP = 'your.server.ip.address'         # Your server's IP address
+
+# Path to the pscp executable
+$pscpPath = 'C:\Path\To\PuTTY\pscp.exe'
+
+# Log file path (optional)
+$logFile = 'D:\Path\To\Log\copy_log.txt'
