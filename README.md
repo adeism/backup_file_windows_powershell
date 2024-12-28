@@ -1,6 +1,6 @@
 # 📁 Server to Local Sync
 
-Automatisasikan proses sinkronisasi file antara server Ubuntu dan komputer lokal Windows dengan skrip PowerShell ini. Gunakan skrip ini untuk menyalin file secara rekursif, menjaga atribut file, dan mencatat aktivitas untuk pemantauan yang lebih baik.
+Automatisasikan proses sinkronisasi file antara server  linux dan komputer lokal Windows dengan skrip PowerShell ini. Gunakan skrip ini untuk menyalin file secara rekursif, menjaga atribut file, dan mencatat aktivitas untuk pemantauan yang lebih baik.
 
 ## 🚀 Fitur
 
