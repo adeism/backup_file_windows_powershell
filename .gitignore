@@ -1,0 +1,6 @@
+# Ignore actual configuration file with sensitive data
+config.json
+
+# Ignore log files
+logs/
+*.log

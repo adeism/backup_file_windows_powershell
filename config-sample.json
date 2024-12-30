@@ -1,0 +1,8 @@
+{
+    "serverFoldconfig.jsoner": "/path/to/source/folder/",
+    "localFolder": "D:\\Path\\To\\Local\\Destination",
+    "ppkFilePath": "C:\\Path\\To\\Your\\keyfile.ppk",
+    "username": "your_username",
+    "serverIP": "your.server.ip.address",
+    "pscpPath": "C:\\Path\\To\\PuTTY\\pscp.exe"
+}
