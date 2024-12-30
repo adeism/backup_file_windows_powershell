@@ -2,110 +2,136 @@
 # Configuration Variables
 # =============================
 
-# Path to the source folder on the Ubuntu server
-$serverFolder = '/path/to/source/folder/'
+# Use a configuration file to store sensitive data
+$configPath = Join-Path $PSScriptRoot "config.json"
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
 
-# Path to the local destination folder on Windows
-$localFolder = 'D:\Path\To\Local\Destination'
+# Configuration variables from JSON
+$serverFolder = $config.serverFolder
+$localFolder = $config.localFolder
+$ppkFilePath = $config.ppkFilePath
+$username = $config.username
+$serverIP = $config.serverIP
+$pscpPath = $config.pscpPath
+$logFile = Join-Path $PSScriptRoot "logs\$(Get-Date -Format 'yyyy-MM-dd')-copy_log.txt"
 
-# Path to the PPK key file for authentication
-$ppkFilePath = 'C:\Path\To\Your\keyfile.ppk'
-
-# Ubuntu server credentials
-$username = 'your_username'                  # Your server username
-$serverIP = 'your.server.ip.address'         # Your server's IP address
-
-# Path to the pscp executable
-$pscpPath = 'C:\Path\To\PuTTY\pscp.exe'
-
-# Log file path (optional)
-$logFile = 'D:\Path\To\Log\copy_log.txt'
+# Create logs directory if it doesn't exist
+$logDir = Split-Path $logFile -Parent
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
 
 # =============================
 # Function Definitions
 # =============================
 
-# Function to log messages
-function Log-Message {
+function Write-Log {
+    [CmdletBinding()]
     param (
-        [string]$message
+        [Parameter(Mandatory)]
+        [string]$Message,
+        [ValidateSet('INFO', 'WARNING', 'ERROR')]
+        [string]$Level = 'INFO'
     )
+    
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $formattedMessage = "[$timestamp] $message"
-    Write-Host $formattedMessage
-    $formattedMessage | Out-File -FilePath $logFile -Append
+    $formattedMessage = "[$timestamp] [$Level] $Message"
+    
+    # Write to console with appropriate color
+    switch ($Level) {
+        'ERROR'   { Write-Host $formattedMessage -ForegroundColor Red }
+        'WARNING' { Write-Host $formattedMessage -ForegroundColor Yellow }
+        'INFO'    { Write-Host $formattedMessage -ForegroundColor Green }
+    }
+    
+    # Write to log file
+    Add-Content -Path $logFile -Value $formattedMessage
 }
 
-# =============================
-# Pre-Execution Checks
-# =============================
+function Test-Prerequisites {
+    $prerequisites = @(
+        @{ Path = $pscpPath; Type = "PSCP executable" },
+        @{ Path = $ppkFilePath; Type = "PPK key file" },
+        @{ Path = $configPath; Type = "Configuration file" }
+    )
 
-# Verify that pscp.exe exists
-if (-not (Test-Path -Path $pscpPath)) {
-    Log-Message "ERROR: pscp.exe not found at path: $pscpPath"
-    exit 1
+    $allValid = $true
+    foreach ($item in $prerequisites) {
+        if (-not (Test-Path -Path $item.Path)) {
+            Write-Log -Level ERROR -Message "$($item.Type) not found at path: $($item.Path)"
+            $allValid = $false
+        }
+    }
+
+    return $allValid
 }
 
-# Ensure the PPK key file exists
-if (-not (Test-Path -Path $ppkFilePath)) {
-    Log-Message "ERROR: PPK key file not found at path: $ppkFilePath"
-    exit 1
+function Initialize-LocalFolder {
+    if (-not (Test-Path -Path $localFolder)) {
+        try {
+            New-Item -ItemType Directory -Path $localFolder -Force | Out-Null
+            Write-Log -Message "Created local folder: $localFolder"
+        }
+        catch {
+            Write-Log -Level ERROR -Message "Failed to create local folder: $_"
+            return $false
+        }
+    }
+    return $true
 }
 
-# Ensure the local destination folder exists; create it if it doesn't
-if (-not (Test-Path -Path $localFolder)) {
+function Start-FileSync {
+    $pscpArguments = @(
+        "-batch",                                   # Disable all interactive prompts
+        "-i", $ppkFilePath,                        # Specify the PPK key file
+        "-r",                                      # Recursive copy
+        "-p",                                      # Preserve file attributes
+        "${username}@${serverIP}:${serverFolder}*", # Source
+        $localFolder                               # Destination
+    )
+
     try {
-        New-Item -ItemType Directory -Path $localFolder -Force | Out-Null
-        Log-Message "Created local folder: $localFolder"
+        $process = Start-Process -FilePath $pscpPath -ArgumentList $pscpArguments -Wait -NoNewWindow -PassThru
+        return $process.ExitCode
     }
     catch {
-        Log-Message "ERROR: Failed to create local folder: $_"
-        exit 1
+        Write-Log -Level ERROR -Message "Failed to execute PSCP: $_"
+        return 1
     }
 }
 
 # =============================
-# Execute pscp Command
+# Main Execution
 # =============================
 
-# Construct the pscp command arguments without unnecessary quotes
-$pscpArguments = @(
-    "-i", "${ppkFilePath}",                     # Specify the PPK key file
-    "-r",                                       # Recursive copy
-    "-p",                                       # Preserve file attributes (timestamps, etc.)
-    "${username}@${serverIP}:${serverFolder}*",  # Source: username@serverIP:/path/to/source/*
-    "${localFolder}"                            # Destination: D:\Path\To\Local\Destination
-)
+# Error handling
+$ErrorActionPreference = "Stop"
 
-# Optional: Display the command for debugging purposes
-# Uncomment the line below to see the exact command being executed
-# Log-Message "Executing command: `"$pscpPath`" $($pscpArguments -join ' ')"
-
-# Execute the pscp command using the call operator (&)
 try {
-    & "$pscpPath" $pscpArguments
-    $exitCode = $LASTEXITCODE
+    # Check prerequisites
+    if (-not (Test-Prerequisites)) {
+        exit 1
+    }
+
+    # Initialize local folder
+    if (-not (Initialize-LocalFolder)) {
+        exit 1
+    }
+
+    # Start sync process
+    Write-Log -Message "Starting file synchronization..."
+    $exitCode = Start-FileSync
+
+    # Handle results
+    if ($exitCode -eq 0) {
+        Write-Log -Message "Files synchronized successfully from ${serverIP}:${serverFolder} to ${localFolder}"
+    }
+    else {
+        Write-Log -Level ERROR -Message "Synchronization failed with exit code $exitCode"
+        exit $exitCode
+    }
 }
 catch {
-    Log-Message "ERROR: An error occurred while executing pscp: $_"
+    Write-Log -Level ERROR -Message "Unexpected error: $_"
     exit 1
 }
-
-# =============================
-# Post-Execution Handling
-# =============================
-
-# Check if pscp executed successfully
-if ($exitCode -eq 0) {
-    Log-Message "SUCCESS: Files copied successfully from ${serverIP}:${serverFolder} to ${localFolder}."
-}
-else {
-    Log-Message "ERROR: pscp failed with exit code $exitCode."
-    exit $exitCode
-}
-
-# =============================
-# Optional: Further Processing
-# =============================
-
-# Add any additional actions here, such as processing copied files or sending notifications.
